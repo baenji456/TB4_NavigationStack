@@ -17,10 +17,6 @@ RUN sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable
 RUN wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
 RUN sudo apt-get update && sudo apt-get install -y ignition-fortress
 
-# Add sourcing to shell startup script
-#RUN echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
-# Check environment variables -> should all be set, ROS_DISTRO should be "humble"
-#RUN printenv | grep -i ROS
 
 # Environment setup
 RUN echo 'source /opt/ros/humble/setup.bash' >> ~/.bashrc
