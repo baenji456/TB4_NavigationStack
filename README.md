@@ -54,6 +54,3 @@ ros2 service call /slam_toolbox/save_map slam_toolbox/srv/SaveMap "name:
 > - File name already exists
 > - ROS environment is not sourced
 > - Map isnt big enough (this one is speculation by now, will be looking further into this)
-
-## Training:
-### Train Semantic Kitti
