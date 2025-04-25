@@ -19,7 +19,7 @@ docker compose down
 > [!CAUTION]
 > xhost + is not a save operation!
 
-### Inside Docker Container
+### First steps
 #### Generate Map using SLAM
 
 This is a combination of the [SLAM](https://turtlebot.github.io/turtlebot4-user-manual/tutorials/generate_map.html) and [turtlebot4 simulator](https://turtlebot.github.io/turtlebot4-user-manual/software/turtlebot4_simulator.html) tutorials. Visit those websites for further information on the commands.
@@ -54,3 +54,33 @@ ros2 service call /slam_toolbox/save_map slam_toolbox/srv/SaveMap "name:
 > - File name already exists
 > - ROS environment is not sourced
 > - Map isnt big enough (this one is speculation by now, will be looking further into this)
+
+#### Navigate a map using Nav2
+This is based on the Turtlebot4 [navigation tutorial](https://turtlebot.github.io/turtlebot4-user-manual/tutorials/navigation.html)
+
+```bash
+# Start Localization
+ros2 launch turtlebot4_navigation localization.launch.py map:=map_name.yaml
+```
+
+```bash
+# Start Nav2
+ros2 launch turtlebot4_navigation nav2.launch.py
+```
+
+```bash
+# Start RVIZ
+# You can also start rviz by adding "rviz:=true" to the simulation startup
+ros2 launch turtlebot4_viz view_robot.launch.py
+```
+
+In RVIZ:
+- Set initial pose with "2D Pose Estimate"
+- Set Nav2 Goal with "Nav2 Goal"
+- Nav2 stack will plan a path to the goal pose and attempt to drive the robot there
+> [!NOTE]
+> Click for position and drag for orientation
+
+
+#### Navigation while mapping
+ToDO: Make this example, based on [this tutorial](https://docs.nav2.org/tutorials/docs/navigation2_with_slam.html)
