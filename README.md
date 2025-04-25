@@ -53,7 +53,7 @@ ros2 service call /slam_toolbox/save_map slam_toolbox/srv/SaveMap "name:
 > Saving map doesnt always work. Some, but not all reasons can be:
 > - File name already exists
 > - ROS environment is not sourced
-> - Map isnt big enough (this one is speculation by now, will be looking further into this)
+> - Map isnt done generating (wait a few seconds after last robot movement)
 
 #### Navigate a map using Nav2
 This is based on the Turtlebot4 [navigation tutorial](https://turtlebot.github.io/turtlebot4-user-manual/tutorials/navigation.html)
