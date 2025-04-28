@@ -87,7 +87,27 @@ ToDO: Make this example, based on [this tutorial](https://docs.nav2.org/tutorial
 
 
 # Mapping
+
+
+
+
 ## Mapping with RTAB-Map
+
+### Comparison of RTAB-Map and SLAM Toolbox
+
+| Aspect | RTAB-Map | SLAM Toolbox |
+|:------|:---------|:-------------|
+| **Type** | Visual and Lidar SLAM (2D/3D) | 2D Lidar-based SLAM |
+| **Focus** | General-purpose, flexible, sensor fusion | Large, dynamic environments |
+| **Mapping** | 2D/3D occupancy grids, dense point clouds | 2D occupancy grids |
+| **Multi-session** | Supported; merges sessions online | Strong multi-session support, serialization |
+| **Localization** | Robust localization after mapping | Pure localization with dynamic environment adaptation |
+| **Loop closure** | Visual and lidar-based, memory-managed | Strong loop closure, manual graph editing |
+| **Performance** | Higher compute demand, scalable with management | Highly optimized, runs on mobile CPUs |
+| **ROS Integration** | ROS1 + ROS2, flexible package | ROS1 + ROS2, default in ROS2 Navigation2 |
+| **Ease of Use** | Flexible but complex to tune | Simple setup, ready-to-use modes |
+| **Best For** | Complex 2D/3D SLAM tasks, sensor fusion | Fast 2D mapping in large or changing spaces |
+
 ### Simple TB4 Nav2, 2D LiDAR and RGB-D SLAM
 ```bash
 # Launch simulator
