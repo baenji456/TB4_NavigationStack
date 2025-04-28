@@ -19,8 +19,8 @@ docker compose down
 > [!CAUTION]
 > xhost + is not a save operation!
 
-### First steps
-#### Generate Map using SLAM
+## First steps
+### Generate Map using SLAM
 
 This is a combination of the [SLAM](https://turtlebot.github.io/turtlebot4-user-manual/tutorials/generate_map.html) and [turtlebot4 simulator](https://turtlebot.github.io/turtlebot4-user-manual/software/turtlebot4_simulator.html) tutorials. Visit those websites for further information on the commands.
 
@@ -55,7 +55,7 @@ ros2 service call /slam_toolbox/save_map slam_toolbox/srv/SaveMap "name:
 > - ROS environment is not sourced
 > - Map isnt done generating (wait a few seconds after last robot movement)
 
-#### Navigate a map using Nav2
+### Navigate a map using Nav2
 This is based on the Turtlebot4 [navigation tutorial](https://turtlebot.github.io/turtlebot4-user-manual/tutorials/navigation.html)
 
 ```bash
@@ -82,5 +82,31 @@ In RVIZ:
 > Click for position and drag for orientation
 
 
-#### Navigation while mapping
+### Navigation while mapping
 ToDO: Make this example, based on [this tutorial](https://docs.nav2.org/tutorials/docs/navigation2_with_slam.html)
+
+
+# Mapping
+## Mapping with RTAB-Map
+### Simple TB4 Nav2, 2D LiDAR and RGB-D SLAM
+```bash
+# Launch simulator
+ros2 launch turtlebot4_ignition_bringup turtlebot4_ignition.launch.py slam:=false nav2:=true rviz:=true
+```
+
+```bash
+# Launch SLAM
+ros2 launch rtabmap_demos turtlebot4_slam.launch.py use_sim_time:=true
+```
+
+# RoadMap
+## General
+- [x] Easy End-to-End tutorials from Nav2 Website
+## Simulation
+- [x] Basic Turtlebot4 simulation
+- [ ] Add dynamic objects to maps
+- [ ] Add new sensors to TB4
+## Mapping and Localization
+- [x] Include RTAB-Map
+- [x] Simple RTAB-Map Tutorial
+- [ ] RTAB-Map with 3D-Sensors
