@@ -110,7 +110,7 @@ We use RTAB-Map for Mapping in this Navigation Framework. In comparison to the s
 
 ### Simple TB4 Nav2, 2D LiDAR and RGB-D SLAM
 
-There are a lot of (sensor integration)[https://github.com/introlab/rtabmap_ros/tree/ros2/rtabmap_examples/launch] and (robot integration)[https://github.com/introlab/rtabmap_ros/tree/ros2/rtabmap_demos] examples already in the ROS2 RTAB-Map package included. The following example shows the use of RTAB-Map with our Turtlebot4.
+There are a lot of [sensor integration](https://github.com/introlab/rtabmap_ros/tree/ros2/rtabmap_examples/launch) and [robot integration](https://github.com/introlab/rtabmap_ros/tree/ros2/rtabmap_demos) examples already in the ROS2 RTAB-Map package included. The following example shows the use of RTAB-Map with our Turtlebot4.
 
 In separate Terminals do
 ```bash
