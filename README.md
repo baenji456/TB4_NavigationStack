@@ -93,7 +93,7 @@ ToDO: Make this example, based on [this tutorial](https://docs.nav2.org/tutorial
 
 ## Mapping with RTAB-Map
 
-### Comparison of RTAB-Map and SLAM Toolbox
+We use RTAB-Map for Mapping in this Navigation Framework. In comparison to the standard SLAM Toolbox it is a bit more complex, but also more flexible with other sensors. While SLAM Toolbox only supports 2D LiDAR-based SLAM, RTAB-Map supports 2D and 3D LiDAR SLAM as well as visual SLAM. the full comparison ist shown in the following table:
 
 | Aspect | RTAB-Map | SLAM Toolbox |
 |:------|:---------|:-------------|
@@ -109,6 +109,10 @@ ToDO: Make this example, based on [this tutorial](https://docs.nav2.org/tutorial
 | **Best For** | Complex 2D/3D SLAM tasks, sensor fusion | Fast 2D mapping in large or changing spaces |
 
 ### Simple TB4 Nav2, 2D LiDAR and RGB-D SLAM
+
+There are a lot of (sensor integration)[https://github.com/introlab/rtabmap_ros/tree/ros2/rtabmap_examples/launch] and (robot integration)[https://github.com/introlab/rtabmap_ros/tree/ros2/rtabmap_demos] examples already in the ROS2 RTAB-Map package included. The following example shows the use of RTAB-Map with our Turtlebot4.
+
+In separate Terminals do
 ```bash
 # Launch simulator
 ros2 launch turtlebot4_ignition_bringup turtlebot4_ignition.launch.py slam:=false nav2:=true rviz:=true
@@ -118,6 +122,8 @@ ros2 launch turtlebot4_ignition_bringup turtlebot4_ignition.launch.py slam:=fals
 # Launch SLAM
 ros2 launch rtabmap_demos turtlebot4_slam.launch.py use_sim_time:=true
 ```
+
+You can now steer the TB4 in the Gazebo Ignition simulation and create a map with the RTAB-Map SLAM-method.
 
 # RoadMap
 ## General
