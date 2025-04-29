@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>mapping_nodes</name>
+  <version>0.0.1</version>
+  <description>Dummy nodes for mapping functionality using RTAB-Map</description>
+
+  <maintainer email="benjamin.serfling@th-ab.de">Benjamin Serfling</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rtabmap_ros</depend>
+  <depend>rtabmap_conversions</depend>
+
+  <exec_depend>python3</exec_depend>
+
+</package>

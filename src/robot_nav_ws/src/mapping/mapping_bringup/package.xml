@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>mapping_bringup</name>
+  <version>0.0.1</version>
+  <description>Launch and configuration package for mapping_nodes</description>
+
+  <maintainer email="benjamin.serfling@th-ab.de">Benjamin Serfling</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>mapping_nodes</exec_depend>
+
+</package>

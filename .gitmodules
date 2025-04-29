@@ -1,0 +1,18 @@
+[submodule "src/robot_nav_ws/src/mapping/rtab_map/rtabmap"]
+	path = src/robot_nav_ws/src/mapping/rtab_map/rtabmap
+	url = https://github.com/introlab/rtabmap.git
+[submodule "src/robot_nav_ws/src/mapping/rtab_map/rtabmap_ros"]
+	path = src/robot_nav_ws/src/mapping/rtab_map/rtabmap_ros
+	url = https://github.com/introlab/rtabmap_ros.git
+	branch = ros2
+[submodule "src/robot_nav_ws/src/robot_nav_ws/src/mapping/extern/rtabmap"]
+	path = src/robot_nav_ws/src/robot_nav_ws/src/mapping/extern/rtabmap
+	url = https://github.com/introlab/rtabmap_ros.git
+	branch = ros2
+[submodule "src/robot_nav_ws/src/mapping/extern/rtabmap_ros"]
+	path = src/robot_nav_ws/src/mapping/extern/rtabmap_ros
+	url = https://github.com/introlab/rtabmap_ros.git
+	branch = ros2
+[submodule "src/robot_nav_ws/src/mapping/extern/rtabmap"]
+	path = src/robot_nav_ws/src/mapping/extern/rtabmap
+	url = https://github.com/introlab/rtabmap.git
