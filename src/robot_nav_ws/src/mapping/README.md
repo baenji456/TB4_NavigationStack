@@ -4,6 +4,7 @@ This folder contains all mapping-related packages, divided into external librari
 
 ## Structure
 
+```
 mapping/
 ├── extern/
 │ ├── rtabmap/ # External library (submodule)
@@ -16,7 +17,7 @@ mapping/
 │ ├── launch/ # Launch files
 │ ├── config/ # YAML configuration files
 │ ├── rviz/ # RViz visualization setups
-
+```
 
 
 ## Package Description
