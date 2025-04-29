@@ -1,0 +1,21 @@
+# ROS2/colcon build artifacts
+**/build/
+**/install/
+**/log/
+
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# CMake specific
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Other editor-specific files
+.vscode/
+.idea/
+*.swp
