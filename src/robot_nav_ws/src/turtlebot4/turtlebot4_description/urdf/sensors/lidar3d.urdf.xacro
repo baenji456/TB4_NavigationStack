@@ -37,10 +37,10 @@
     <xacro:ray_sensor 
         sensor_name="${name}" 
         gazebo="${gazebo}"
-        update_rate="10" 
+        update_rate="20"
         visualize="1"
-        h_samples="720" h_res="1" h_min_angle="-3.14" h_max_angle="3.14"
-        v_samples="32" v_res="1" v_min_angle="-0.5" v_max_angle="0.5"
+        h_samples="2048" h_res="1" h_min_angle="-3.14" h_max_angle="3.14"
+        v_samples="128" v_res="1" v_min_angle="-0.5" v_max_angle="0.5"
         r_min="0.1" r_max="30.0" r_res="0.01">
       <plugin name="dummy_plugin" filename="libdummy.so"/>
     </xacro:ray_sensor>
