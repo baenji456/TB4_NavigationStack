@@ -11,11 +11,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-nav2-bringup \
     && rm -rf /var/lib/apt/lists/*
 
+
 # install gazebo
 RUN sudo apt-get update && sudo apt-get install wget
 RUN sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
 RUN wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
 RUN sudo apt-get update && sudo apt-get install -y ignition-fortress
+
+# install other dependencies
+RUN apt-get update && apt-get install -y libpcl-dev
+
+# Build workspace
+RUN rosdep update && rosdep install --from-paths src --ignore-src -r -y
+RUN colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+RUN source install/setup.bash
 
 
 # Environment setup

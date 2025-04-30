@@ -216,6 +216,22 @@ def generate_launch_description():
             ]
         ),
 
+        # 3D LIDAR static transform
+        Node(
+            name='lidar_stf',
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            output='screen',
+            arguments=[
+                '0', '0', '0', '0', '0', '0',
+                'lidar3d_link', [robot_name, '/lidar3d_link/lidar3d']],
+            remappings=[
+                ('/tf', 'tf'),
+                ('/tf_static', 'tf_static'),
+            ]
+        ),
+
+
         # OAKD static transform
         # Required for pointcloud. See https://github.com/gazebosim/gz-sensors/issues/239
         Node(
