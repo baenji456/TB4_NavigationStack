@@ -1,6 +1,6 @@
 version: '3.3'
 services:
-  tb4_simulator:
+  tb4_navstack_jazzy:
     shm_size: 24G
     build:
       context: ./
@@ -8,8 +8,9 @@ services:
       args:
         - USER_ID=$USER_ID
         - USER_NAME=$USER_NAME
-    image: tb4_simulator
-    container_name: TurtleBot4Simulator
+    image: tb4_navstack_jazzy
+    container_name: TurtleBot4NavStack_Jazzy
+    network_mode: "host"
     environment:
       - DISPLAY=${DISPLAY}
     volumes:
@@ -18,4 +19,3 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix
     entrypoint: ["tail", "-f", "/dev/null"]
     privileged: true
-    runtime: nvidia
