@@ -19,6 +19,17 @@ docker compose down
 > [!CAUTION]
 > xhost + is not a save operation!
 
+
+In Docker Container:
+
+```bash
+# Build workspace from source
+rosdep update && rosdep install --from-paths src --ignore-src -r -y
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+source install/setup.bash
+```
+TODO: automate this with entrypoint.sh
+
 ## First steps
 ### Generate Map using SLAM
 
