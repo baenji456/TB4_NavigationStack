@@ -169,6 +169,9 @@ ros2 launch rtabmap_demos turtlebot4_slam.launch.py use_sim_time:=true
 You can now steer the TB4 in the Gazebo Ignition simulation and create a map with the RTAB-Map SLAM-method.
 
 # RoadMap
+
+![Navigation Framework](images/Navigationsframework_Poster_breiteres_Formet.drawio.png)
+
 ## General
 - [x] Easy End-to-End tutorials from Nav2 Website
 ## Simulation
@@ -179,3 +182,7 @@ You can now steer the TB4 in the Gazebo Ignition simulation and create a map wit
 - [x] Include RTAB-Map
 - [x] Simple RTAB-Map Tutorial
 - [ ] RTAB-Map with 3D-Sensors
+
+## Global Path Planning
+- [ ] A*
+- [ ] Djikstra
