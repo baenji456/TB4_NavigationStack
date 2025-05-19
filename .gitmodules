@@ -16,3 +16,18 @@
 [submodule "src/robot_nav_ws/src/mapping/extern/rtabmap"]
 	path = src/robot_nav_ws/src/mapping/extern/rtabmap
 	url = https://github.com/introlab/rtabmap.git
+[submodule "src/robot_nav_ws/src/simulation/turtlebot4_simulator"]
+	path = src/robot_nav_ws/src/simulation/turtlebot4_simulator
+	url = https://github.com/turtlebot/turtlebot4_simulator.git
+	branch = jazzy
+[submodule "src/robot_nav_ws/src/mapping/extern/--force"]
+	path = src/robot_nav_ws/src/mapping/extern/--force
+	url = https://github.com/introlab/rtabmap.git
+[submodule "src/robot_nav_ws/src/common/turtlebot4"]
+	path = src/robot_nav_ws/src/common/turtlebot4
+	url = https://github.com/turtlebot/turtlebot4.git
+	branch = jazzy
+[submodule "src/robot_nav_ws/src/common/turtlebot4_desktop"]
+	path = src/robot_nav_ws/src/common/turtlebot4_desktop
+	url = https://github.com/turtlebot/turtlebot4_desktop.git
+	branch = jazzy

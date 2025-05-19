@@ -30,6 +30,38 @@ source install/setup.bash
 ```
 TODO: automate this with entrypoint.sh
 
+
+## Switching between Setups
+
+In this project, we use three distinct ROS 2 network setups, each configured for a specific use case.  
+**Only one setup should be active in a terminal session at a time.** Mixing them will lead to communication issues.
+
+> [!CAUTION]
+> The scripts can be found in the [setup folder](setup). For reproducability of the tutorials, copy them to your host machines /etc folder.
+> Also some adjustments may have to be made, especially for the discovery server setup, if not used with our Jazzy TB4
+
+### Available Setups
+
+| Setup Name                        | Script Path                            | Description                                                                 |
+|----------------------------------|----------------------------------------|-----------------------------------------------------------------------------|
+| TB4 Simple Discovery Mode        | `etc/turtlebot/setup.bash`             | For communication with the Humble TB4 using default Fast DDS discovery.     |
+| TB4 Discovery Server Mode        | `etc/turtlebot_discovery/setup.bash`   | For communication with the Jazzy TB4 via a centralized Discovery Server.    |
+| TB4 Simulation Mode (Localhost)  | `etc/simulation/setup.bash`            | For running simulations locally with ROS_LOCALHOST_ONLY (no network usage). |
+
+### How to Use
+
+Each setup script configures the necessary environment variables and unsets any conflicting ones from previous setups.
+
+In your terminal:
+
+```bash
+source etc/turtlebot4/setup.bash            # For Humble TB4 communication
+source etc/turtlebot4_discovery/setup.bash  # For Discovery Server setup
+source etc/turtlebot4_simulation/setup.bash           # For running local simulation
+
+ros2 daemon stop; ros2 daemon start        # sometimes you will have to restart, for changes to be applied
+```
+
 ## First steps
 ### Generate Map using SLAM
 

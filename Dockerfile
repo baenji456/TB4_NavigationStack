@@ -14,10 +14,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 
 # install gazebo#
-#RUN sudo apt-get update && sudo apt-get install wget
-#RUN sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
-#RUN wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
-#RUN sudo apt-get update && sudo apt-get install -y ignition-fortress
+RUN apt-get install curl
+RUN curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
+RUN echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
+RUN apt-get update
+RUN apt-get install gz-harmonic
 
 # install other dependencies
 RUN apt-get update && apt-get install -y libpcl-dev
