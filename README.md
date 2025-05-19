@@ -1,35 +1,4 @@
-### Setup Docker Container
-In docker-compse.yaml all parameters are defined.
-```bash
-# Enable xhost in the terminal
-sudo xhost +
-
-# Add user to environment
-sh setup.sh
-
-# Build the image from scratch using Dockerfile, can be skipped if image already exists or is loaded from docker registry
-docker-compose build --no-cache
-
-# Start the container
-docker-compose up -d
-
-# Stop the container
-docker compose down
-```
-> [!CAUTION]
-> xhost + is not a save operation!
-
-
-In Docker Container:
-
-```bash
-# Build workspace from source
-rosdep update && rosdep install --from-paths src --ignore-src -r -y
-colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
-source install/setup.bash
-```
-TODO: automate this with entrypoint.sh
-
+# Basic Setup
 
 ## Switching between Setups
 
@@ -62,15 +31,48 @@ source etc/turtlebot4_simulation/setup.bash           # For running local simula
 ros2 daemon stop; ros2 daemon start        # sometimes you will have to restart, for changes to be applied
 ```
 
-## First steps
-### Generate Map using SLAM
+## Setup Docker container
+In docker-compse.yaml all parameters are defined.
+```bash
+# Enable xhost in the terminal
+sudo xhost +
+
+# Add user to environment
+sh setup.sh
+
+# Build the image from scratch using Dockerfile, can be skipped if image already exists or is loaded from docker registry
+docker-compose build --no-cache
+
+# Start the container
+docker-compose up -d
+
+# Stop the container
+docker compose down
+```
+> [!CAUTION]
+> xhost + is not a save operation!
+
+
+In Docker Container:
+
+```bash
+# Build workspace from source
+rosdep update && rosdep install --from-paths src --ignore-src -r -y
+colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+source install/setup.bash
+```
+TODO: automate this with entrypoint.sh
+
+
+# First steps
+## Generate Map using TB4 SLAM
 
 This is a combination of the [SLAM](https://turtlebot.github.io/turtlebot4-user-manual/tutorials/generate_map.html) and [turtlebot4 simulator](https://turtlebot.github.io/turtlebot4-user-manual/software/turtlebot4_simulator.html) tutorials. Visit those websites for further information on the commands.
 
 In separate terminals do:
 
 ```bash
-# Start turtlebot4 ignition simulator
+# IF USING SIMULATOR: Start turtlebot4 ignition simulator
 ros2 launch turtlebot4_ignition_bringup turtlebot4_ignition.launch.py 
 ```
 
@@ -98,7 +100,7 @@ ros2 service call /slam_toolbox/save_map slam_toolbox/srv/SaveMap "name:
 > - ROS environment is not sourced
 > - Map isnt done generating (wait a few seconds after last robot movement)
 
-### Navigate a map using Nav2
+## Navigate a map using Nav2
 This is based on the Turtlebot4 [navigation tutorial](https://turtlebot.github.io/turtlebot4-user-manual/tutorials/navigation.html)
 
 ```bash
@@ -130,9 +132,6 @@ ToDO: Make this example, based on [this tutorial](https://docs.nav2.org/tutorial
 
 
 # Mapping
-
-
-
 
 ## Mapping with RTAB-Map
 
@@ -172,36 +171,40 @@ You can now steer the TB4 in the Gazebo Ignition simulation and create a map wit
 
 ![Navigation Framework](images/Navigationsframework_Poster_breiteres_Formet.drawio.png)
 
-## General
+#### PRIOs
+- [ ] TB4 Jazzy Simulation: LiDAR Problem
+
+#### General
 - [x] Docker Environment for Humble and Jazzy
 - [x] Easy End-to-End tutorials from Nav2 Website
+- [ ] Migrate this repo to RIOT Gitlab
 
-## Simulation
+#### Simulation
 - [x] Basic Turtlebot4 simulation
-- [ ] PRIO: TB4 Jazzy LiDAR Problem
 - [ ] Add dynamic objects to maps
 - [ ] Add new sensors to TB4
 
-## Real
+#### Real
 - [x] Communication with real TB4 using Discovery Server
 - [x] Different setup.bash files for easy mode switching
 
-## Mapping and Localization
+#### Mapping and Localization
 - [x] Include RTAB-Map SLAM
 - [ ] RTAB-Map with 3D-Sensors
 
-### Sim
+##### Sim
 - [x] Basic Mapping with Nav2
 - [x] Simple RTAB-Map Tutorial
-### Real
+##### Real
 - [x] Basic mapping with Nav2
 - [ ] Simple RTAB-Map
 
-## Global Path Planning
+#### Global Path Planning
 - [x] Nav2
 - [ ] A*
 - [ ] Djikstra
 
-## Local Path Planning
-- [ ] Potential fields
+#### Local Path Planning
+- [ ] Dynamic Window
+- [ ] Artificial Potential Fields
 - [ ] PFs with probabilistic predictions
