@@ -173,16 +173,35 @@ You can now steer the TB4 in the Gazebo Ignition simulation and create a map wit
 ![Navigation Framework](images/Navigationsframework_Poster_breiteres_Formet.drawio.png)
 
 ## General
+- [x] Docker Environment for Humble and Jazzy
 - [x] Easy End-to-End tutorials from Nav2 Website
+
 ## Simulation
 - [x] Basic Turtlebot4 simulation
+- [ ] PRIO: TB4 Jazzy LiDAR Problem
 - [ ] Add dynamic objects to maps
 - [ ] Add new sensors to TB4
+
+## Real
+- [x] Communication with real TB4 using Discovery Server
+- [x] Different setup.bash files for easy mode switching
+
 ## Mapping and Localization
-- [x] Include RTAB-Map
-- [x] Simple RTAB-Map Tutorial
+- [x] Include RTAB-Map SLAM
 - [ ] RTAB-Map with 3D-Sensors
 
+### Sim
+- [x] Basic Mapping with Nav2
+- [x] Simple RTAB-Map Tutorial
+### Real
+- [x] Basic mapping with Nav2
+- [ ] Simple RTAB-Map
+
 ## Global Path Planning
+- [x] Nav2
 - [ ] A*
 - [ ] Djikstra
+
+## Local Path Planning
+- [ ] Potential fields
+- [ ] PFs with probabilistic predictions
