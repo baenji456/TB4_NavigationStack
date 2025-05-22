@@ -182,11 +182,12 @@ You can now steer the TB4 in the Gazebo Ignition simulation and create a map wit
 #### Simulation
 - [x] Basic Turtlebot4 simulation
 - [ ] Add dynamic objects to maps
-- [ ] Add new sensors to TB4
+- [ ] Integrate 3D LiDAR
 
 #### Real
 - [x] Communication with real TB4 using Discovery Server
 - [x] Different setup.bash files for easy mode switching
+- [ ] Integrate 3D LiDAR
 
 #### Mapping and Localization
 - [x] Include RTAB-Map SLAM
