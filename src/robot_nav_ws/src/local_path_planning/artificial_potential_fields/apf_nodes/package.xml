@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>apf_nodes</name>
+  <version>0.1.0</version>
+  <description>Custom nodes for local path planning using Artificial Potential Fields</description>
+  <maintainer email="you@example.com">Your Name</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+
+  <exec_depend>python3</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
