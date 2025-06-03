@@ -97,6 +97,29 @@ def generate_launch_description():
               '/link/rplidar_link/sensor/rplidar/scan'],
              'scan')
         ])
+    
+    # 3D lidar bridge
+    lidar3d_bridge = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        name='lidar3d_bridge',
+        output='screen',
+        parameters=[{
+            'use_sim_time': use_sim_time
+        }],
+        arguments=[
+            ['/world/', world,
+             '/model/', robot_name,
+             '/link/lidar3d_link/sensor/lidar3d/scan/points' +
+            '@sensor_msgs/msg/PointCloud2[ignition.msgs.PointCloudPacked']
+        ],
+        remappings=[
+            (['/world/', world,
+              '/model/', robot_name,
+              '/link/lidar3d_link/sensor/lidar3d/scan/points'],
+              'lidar/points'
+              )
+        ])
 
     # Display message bridge
     hmi_display_msg_bridge = Node(
@@ -213,5 +236,6 @@ def generate_launch_description():
     ld.add_action(hmi_buttons_msg_bridge)
     ld.add_action(hmi_led_msg_bridge)
     ld.add_action(lidar_bridge)
+    ld.add_action(lidar3d_bridge)
     ld.add_action(oakd_camera_bridge)
     return ld
