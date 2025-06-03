@@ -16,3 +16,9 @@
 [submodule "src/robot_nav_ws/src/mapping/extern/rtabmap"]
 	path = src/robot_nav_ws/src/mapping/extern/rtabmap
 	url = https://github.com/introlab/rtabmap.git
+[submodule "src/robot_nav_ws/src/common/create3_sim"]
+	path = src/robot_nav_ws/src/common/create3_sim
+	url = https://github.com/iRobotEducation/create3_sim.git
+[submodule "src/robot_nav_ws/src/common/irobot_create_msgs"]
+	path = src/robot_nav_ws/src/common/irobot_create_msgs
+	url = https://github.com/iRobotEducation/irobot_create_msgs.git

@@ -1,22 +1,35 @@
 FROM ros:humble-ros-base-jammy
 
+#RUN apt-get install curl
+#RUN curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+#RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F42ED6FBAB17C654
+
+# HOTFIX: Until GPG Keys are updated in the original image
+RUN rm /etc/apt/sources.list.d/ros2-latest.list && \
+    apt update && apt install curl && \
+    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg && \
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+
+
 # install ros2 packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ros-humble-turtlebot4-simulator \
     ros-humble-turtlebot4-navigation \
     ros-humble-irobot-create-nodes \
     ros-dev-tools \
     ros-humble-rqt* \
     ros-humble-navigation2 \
     ros-humble-nav2-bringup \
+    ros-humble-image-geometry \
+    ros-humble-pcl-conversions \
+    ros-humble-pcl-ros \
     && rm -rf /var/lib/apt/lists/*
 
 
 # install gazebo
-RUN sudo apt-get update && sudo apt-get install wget
-RUN sudo sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
+RUN apt-get update && sudo apt-get install wget
+RUN sh -c 'echo "deb http://packages.osrfoundation.org/gazebo/ubuntu-stable `lsb_release -cs` main" > /etc/apt/sources.list.d/gazebo-stable.list'
 RUN wget http://packages.osrfoundation.org/gazebo.key -O - | sudo apt-key add -
-RUN sudo apt-get update && sudo apt-get install -y ignition-fortress
+RUN apt-get update && sudo apt-get install -y ignition-fortress
 
 # install other dependencies
 RUN apt-get update && apt-get install -y libpcl-dev
@@ -44,6 +57,14 @@ RUN echo "source /opt/ros/humble/setup.bash" >> /etc/turtlebot4/setup.bash
 RUN echo "export ROS_DOMAIN_ID=0" >> /etc/turtlebot4/setup.bash
 RUN echo "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" >> /etc/turtlebot4/setup.bash
 RUN echo 'source /etc/turtlebot4/setup.bash' >> ~/.bashrc
+
+COPY setup/ /etc/
+
+RUN rosdep update && rosdep install --from-paths src --ignore-src -r -y
+RUN export MAKEFLAGS="-j6" # Can be ignored if you have a lot of RAM (>16GB)
+RUN colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+
+
 
 
 ENTRYPOINT ["/ros_entrypoint.sh"]
