@@ -13,8 +13,8 @@ RUN rm /etc/apt/sources.list.d/ros2-latest.list && \
 
 # install ros2 packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ros-humble-turtlebot4-navigation \
-    ros-humble-irobot-create-nodes \
+#    ros-humble-turtlebot4-navigation \
+#    ros-humble-irobot-create-nodes \
     ros-dev-tools \
     ros-humble-rqt* \
     ros-humble-navigation2 \
@@ -56,13 +56,13 @@ RUN sudo touch /etc/turtlebot4/setup.bash
 RUN echo "source /opt/ros/humble/setup.bash" >> /etc/turtlebot4/setup.bash
 RUN echo "export ROS_DOMAIN_ID=0" >> /etc/turtlebot4/setup.bash
 RUN echo "export RMW_IMPLEMENTATION=rmw_fastrtps_cpp" >> /etc/turtlebot4/setup.bash
-RUN echo 'source /etc/turtlebot4/setup.bash' >> ~/.bashrc
+RUN echo 'source /etc/turtlebot4_simulation/setup.bash' >> ~/.bashrc
 
 COPY setup/ /etc/
 
-RUN rosdep update && rosdep install --from-paths src --ignore-src -r -y
-RUN export MAKEFLAGS="-j6" # Can be ignored if you have a lot of RAM (>16GB)
-RUN colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
+#RUN rosdep update && rosdep install --from-paths src --ignore-src -r -y
+#RUN export MAKEFLAGS="-j6" # Can be ignored if you have a lot of RAM (>16GB)
+#RUN colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release
 
 
 
