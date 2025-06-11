@@ -23,6 +23,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-pcl-conversions \
     ros-humble-pcl-ros \
     python3-pip \
+    ros-humble-py-trees \
+    ros-humble-py-trees-ros-interfaces \
+    ros-humble-py-trees-ros \
+    ros-humble-py-trees-ros-tutorials \
+    ros-humble-py-trees-ros-viewer \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install opencv-python numpy<2.0 ultralytics cv_bridge
