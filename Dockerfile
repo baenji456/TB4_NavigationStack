@@ -5,10 +5,10 @@ FROM ros:humble-ros-base-jammy
 #RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys F42ED6FBAB17C654
 
 # HOTFIX: Until GPG Keys are updated in the original image
-RUN rm /etc/apt/sources.list.d/ros2-latest.list && \
-    apt update && apt install curl && \
-    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg && \
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+#RUN rm /etc/apt/sources.list.d/ros2-latest.list && \
+#    apt update && apt install curl && \
+#    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg && \
+#    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
 
 
 # install ros2 packages
@@ -30,7 +30,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-py-trees-ros-viewer \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install opencv-python numpy<2.0 ultralytics cv_bridge
+RUN pip install opencv-python ultralytics cv_bridge
+RUN pip install "numpy<2.0"
 
 
 # install gazebo
