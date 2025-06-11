@@ -1,0 +1,10 @@
+<root>
+  <BehaviorTreeNodes>
+    <BehaviorTreeNode
+      ID="RotateUntilPersonDetected"
+      type="py"
+      path="yolo_detection.RotateUntilPersonDetected"
+      class_name="RotateUntilPersonDetected"
+    />
+  </BehaviorTreeNodes>
+</root>

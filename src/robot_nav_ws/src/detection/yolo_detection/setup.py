@@ -23,5 +23,11 @@ setup(
         'console_scripts': [
             'yolo_detection_node = yolo_detection.yolo_detection_node:main',
         ],
+        'console_scripts': [
+            'RotateUntilPersonDetected = yolo_detection.yolo_detection.RotateUntilPersonDetected:main',  # add main() in your node
+        ],
+        'behavior_tree_nodes': [
+            'RotateUntilPersonDetected = yolo_detection.yolo_detection.RotateUntilPersonDetected',
+        ],
     },
 )
