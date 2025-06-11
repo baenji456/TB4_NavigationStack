@@ -71,7 +71,7 @@ This is based on the Turtlebot4 [navigation tutorial](https://turtlebot.github.i
 
 ```bash
 # Start Localization
-ros2 launch turtlebot4_navigation localization.launch.py map:=map_name.yaml
+ros2 launch turtlebot4_navigation localization.launch.py map:=map_name.yaml use_sim_time:=true
 ```
 
 ```bash
@@ -135,6 +135,42 @@ ros2 launch rtabmap_demos turtlebot4_slam.launch.py use_sim_time:=true
 ```
 
 You can now steer the TB4 in the Gazebo Ignition simulation and create a map with the RTAB-Map SLAM-method.
+
+
+# Behavior trees
+## Make changes to existing BT
+
+### First step: Find out which BT is used (in turtlebot4_navigation/config/nav2.yaml)
+In our case:
+```bash
+    # nav2_bt_navigator/navigate_to_pose_w_replanning_and_recovery.xml
+    # nav2_bt_navigator/navigate_through_poses_w_replanning_and_recovery.xml
+```
+This is most likely in:
+```bash
+/opt/ros/humble/share/nav2_bt_navigator/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml
+```
+Make a copy in project:
+```bash
+mkdir src/robot_nav_ws/src/behavior_trees
+cp /opt/ros/humble/share/nav2_bt_navigator/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml src/behavior_trees/first_custom_bt.xml
+```
+In general
+```bash
+mkdir [path/to/your_ros_ws]/src/behavior_trees
+cp [path/to/nav2_bt_navigator]/behavior_trees/navigate_to_pose_w_replanning_and_recovery.xml [path/to/your_ros_ws]/src/behavior_trees/first_custom_bt.xml
+```
+
+Then make some changes to the BT-XML
+
+### Second step: Add to config file
+
+In turtlebot4_navigation/config/nav2.yaml add:
+```bash
+default_nav_to_pose_bt_xml: "/home/appuser/src/robot_nav_ws/src/behavior_trees/first_custom_bt.xml"
+```
+
+
 
 # RoadMap
 ## General
