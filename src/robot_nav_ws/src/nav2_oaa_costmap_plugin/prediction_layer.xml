@@ -1,0 +1,8 @@
+<library path="nav2_oaa_costmap_plugin_core">  <!-- Name deiner erzeugten .so -->
+  <class
+    name="nav2_oaa_costmap_plugin/PredictionLayer"
+    type="nav2_oaa_costmap_plugin::PredictionLayer"
+    base_class_type="nav2_costmap_2d::Layer">
+    <description>Integrates /predictions/costmap_t05s into layered costmap</description>
+  </class>
+</library>
