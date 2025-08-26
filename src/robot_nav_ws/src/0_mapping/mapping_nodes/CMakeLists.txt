@@ -7,8 +7,8 @@ set(CMAKE_CXX_STANDARD 17)
 # Find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(rtabmap_ros REQUIRED)  # Wichtig: RTAB-Map ROS Integration
-find_package(rtabmap_conversions REQUIRED)  # Falls du Konvertierungen brauchst
+#find_package(rtabmap_ros REQUIRED)  # Wichtig: RTAB-Map ROS Integration
+#find_package(rtabmap_conversions REQUIRED)  # Falls du Konvertierungen brauchst
 
 # Include Directory
 include_directories(
@@ -19,7 +19,7 @@ include_directories(
 add_executable(dummy_mapping_node src/dummy_mapping_node.cpp)
 ament_target_dependencies(dummy_mapping_node
   rclcpp
-  rtabmap_ros
+  #rtabmap_ros
 )
 
 # Install executable

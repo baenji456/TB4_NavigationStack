@@ -1,0 +1,17 @@
+<library path="human_trajectory_costmap_layer_core">
+  <class type="human_trajectory_costmap_layer::HumanTrajectoryLayer"
+    base_class_type="nav2_costmap_2d::Layer">
+    <description>
+      A custom costmap layer that paints probabilistic predictions of human
+      positions onto the navigation costmap. The layer subscribes to
+      `PredictedPositionArray` messages published by a dummy prediction node
+      and uses anisotropic Gaussian kernels to mark the area around each
+      predicted mean.  Each prediction includes a confidence level and
+      standard deviations in x and y; the plugin scales cost values
+      according to the confidence and spreads them according to the
+      sigmas.  This simulates the confidence sets produced by a
+      probabilistic trajectory prediction network【567447048113654†L319-L331】 and
+      allows path planners to avoid predicted pedestrian positions.
+    </description>
+  </class>
+</library>

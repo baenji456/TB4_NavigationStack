@@ -6,7 +6,7 @@ bt_navigator:
     odom_topic: odom
     bt_loop_duration: 10
     default_server_timeout: 20
-    default_nav_to_pose_bt_xml: "/home/appuser/src/robot_nav_ws/src/behavior_trees/first_custom_bt.xml"
+    #default_nav_to_pose_bt_xml: "/home/appuser/src/robot_nav_ws/src/behavior_trees/first_custom_bt.xml"
     # 'default_nav_through_poses_bt_xml' and 'default_nav_to_pose_bt_xml' are use defaults:
     # nav2_bt_navigator/navigate_to_pose_w_replanning_and_recovery.xml
     # nav2_bt_navigator/navigate_through_poses_w_replanning_and_recovery.xml
@@ -101,11 +101,11 @@ controller_server:
       debug_trajectory_details: True
       min_vel_x: 0.0
       min_vel_y: 0.0
-      max_vel_x: 0.26
-      max_vel_y: 0.0
+      max_vel_x: 1.00
+      max_vel_y: 1.00
       max_vel_theta: 1.0
       min_speed_xy: 0.0
-      max_speed_xy: 0.26
+      max_speed_xy: 1.0
       min_speed_theta: 0.0
       # Add high threshold velocity for turtlebot 3 issue.
       # https://github.com/ROBOTIS-GIT/turtlebot3_simulations/issues/75
@@ -141,17 +141,17 @@ controller_server:
 local_costmap:
   local_costmap:
     ros__parameters:
-      update_frequency: 5.0
-      publish_frequency: 2.0
+      update_frequency: 10.0
+      publish_frequency: 10.0
       global_frame: odom
       robot_base_frame: base_link
       use_sim_time: True
       rolling_window: true
-      width: 3
-      height: 3
+      width: 5
+      height: 5
       resolution: 0.06
       robot_radius: 0.175
-      plugins: ["static_layer", "voxel_layer", "inflation_layer"]
+      plugins: ["static_layer", "voxel_layer", "inflation_layer", "prediction_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 4.0
@@ -179,7 +179,15 @@ local_costmap:
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
-      always_send_full_costmap: True
+      prediction_layer:
+        plugin: "nav2_oaa_costmap_plugin/PredictionLayer"
+        enabled: true
+        topic: "/predictions/costmap_t05s"
+        combination_method: 1
+        min_apply_cost: 1.0
+        treat_unknown_as_free: false
+        require_same_frame: false   # TF-Handling aktiv
+        data_timeout: 2.0
 
 global_costmap:
   global_costmap:
@@ -215,6 +223,7 @@ global_costmap:
         cost_scaling_factor: 4.0
         inflation_radius: 0.45
       always_send_full_costmap: True
+
 
 planner_server:
   ros__parameters:

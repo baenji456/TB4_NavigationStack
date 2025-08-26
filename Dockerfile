@@ -23,11 +23,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-pcl-conversions \
     ros-humble-pcl-ros \
     python3-pip \
+    ros-humble-nav2-behavior-tree \
     ros-humble-py-trees \
     ros-humble-py-trees-ros-interfaces \
     ros-humble-py-trees-ros \
     ros-humble-py-trees-ros-tutorials \
     ros-humble-py-trees-ros-viewer \
+    ros-humble-irobot-create-msgs \
+    ros-humble-rviz2 \
+    ros-humble-ros-ign-interfaces \
+    ros-humble-libg2o \
+    ros-humble-ros-ign-gazebo \
+    ros-humble-ros-gz\
+    ros-humble-ros-gz-bridge \
+    ros-humble-ros-gz-sim \
+    ros-humble-ros-gz-image \
+    ros-humble-ros2-control \
+    ros-humble-ros2-controllers \
+    qml-module-qtquick-extras \
+    ros-humble-generate-parameter-library \
+    ros-humble-generate-parameter-library-py \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install opencv-python ultralytics cv_bridge
@@ -43,7 +58,13 @@ RUN apt-get update && sudo apt-get install -y ignition-fortress
 # install other dependencies
 RUN apt-get update && apt-get install -y libpcl-dev
 
+# Tools & GL loader libs to check/enable hardware GL
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    mesa-utils libgl1 libglvnd0 libegl1 libgles2 \
+    && rm -rf /var/lib/apt/lists/*
 
+# (optional) Vulkan utils if you experiment with EGL headless paths
+RUN apt-get update && apt-get install -y --no-install-recommends vulkan-tools
 
 
 # Environment setup
