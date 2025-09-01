@@ -13,13 +13,13 @@ dummy_tracker_node:
 
 dummy_mdn_pred_node:
   ros__parameters:
-    dt: 0.1
-    H: 3
+    dt: 0.5
+    H: 6
     forward_speed: 1.0
     topic_in:  /tracked_object/poses
     topic_out: /predictions/mixtures
-    drift_base: 0.05
-    drift_side: 0.40
+    drift_base: 0.15
+    drift_side: 0.25
     sigx0: 0.20
     sigy0: 0.05
     dsigx: 0.05
@@ -35,16 +35,16 @@ dummy_mdn_pred_node:
 mdn_sampler_single:
   ros__parameters:
     topic_in: /predictions/mixtures
-    topic_out_single: /predictions/costmap_t05s
+    topic_out_single: /predictions/costmap_t1_5s
     output_mode: single
     output_h: -1
-    output_t: 0.5
+    output_t: 1.5
     x_min: -10.0
     x_max:  10.0
     y_min: -10.0
     y_max:  10.0
     resolution: 0.06
-    samples_per_step: 10000
+    samples_per_step: 1000
     seed: 0
     backend: numpy
 
@@ -61,3 +61,4 @@ mdn_sampler_array:
     samples_per_step: 10000
     seed: 0
     backend: numpy
+    percentile_mode: true

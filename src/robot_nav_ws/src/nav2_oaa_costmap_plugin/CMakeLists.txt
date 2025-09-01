@@ -18,6 +18,7 @@ find_package(pluginlib REQUIRED)
 find_package(nav2_costmap_2d REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(prediction_msgs REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
@@ -25,6 +26,7 @@ find_package(tf2_geometry_msgs REQUIRED)
 # === Build ===
 add_library(${lib_name} SHARED
   src/prediction_layer.cpp
+  src/simple_oaa_layer.cpp
 )
 
 target_include_directories(${lib_name} PUBLIC
@@ -38,6 +40,7 @@ ament_target_dependencies(${lib_name}
   nav2_costmap_2d
   nav_msgs
   geometry_msgs
+  prediction_msgs
   tf2
   tf2_ros
   tf2_geometry_msgs

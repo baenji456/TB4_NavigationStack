@@ -39,10 +39,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-humble-ros-gz-sim \
     ros-humble-ros-gz-image \
     ros-humble-ros2-control \
+    ros-humble-ign-ros2-control \
     ros-humble-ros2-controllers \
     qml-module-qtquick-extras \
     ros-humble-generate-parameter-library \
     ros-humble-generate-parameter-library-py \
+    ros-humble-diff-drive-controller \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install opencv-python ultralytics cv_bridge

@@ -44,7 +44,7 @@ class DummyMDNPredictionNode(Node):
         self.declare_parameter('topic_out', '/predictions/mixtures')
 
         # Querdrift-Faktoren (wie in deinem Beispiel)
-        self.declare_parameter('drift_base', 0.05)        # für "geradeaus"
+        self.declare_parameter('drift_base', 0.55)        # für "geradeaus"
         self.declare_parameter('drift_side', 0.40)        # für links/rechts
 
         # Kovarianz-Basis & Wachstum über h

@@ -21,7 +21,7 @@ void GradientLayer::onInitialize()
   declareParameter("enabled", rclcpp::ParameterValue(true));
   node->get_parameter(name_ + ".enabled", enabled_);
 
-  declareParameter("topic", rclcpp::ParameterValue(std::string("/predictions/costmap_t05s")));
+  declareParameter("topic", rclcpp::ParameterValue(std::string("/predictions/costmap_t1_5s")));
   node->get_parameter(name_ + ".topic", topic_);
 
   declareParameter("scale_to_lethal", rclcpp::ParameterValue(true));

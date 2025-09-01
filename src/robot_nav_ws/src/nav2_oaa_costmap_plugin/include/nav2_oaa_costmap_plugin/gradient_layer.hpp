@@ -38,7 +38,7 @@ private:
   double grid_min_x_{0.0}, grid_min_y_{0.0}, grid_max_x_{0.0}, grid_max_y_{0.0};
 
   // Parameter
-  std::string topic_{"/predictions/costmap_t05s"};
+  std::string topic_{"/predictions/costmap_t1_5s"};
   bool scale_to_lethal_{true}; // 100 -> LETHAL_OBSTACLE
 };
 

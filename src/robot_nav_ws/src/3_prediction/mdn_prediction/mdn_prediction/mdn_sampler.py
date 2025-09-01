@@ -1,6 +1,7 @@
 # mdn_prediction/mdn_prediction/mdn_sampler.py
 import math
 from typing import Tuple, List
+import matplotlib.pyplot as plt
 
 import numpy as np
 
@@ -9,6 +10,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Pose
 from nav_msgs.msg import OccupancyGrid, MapMetaData
 from std_msgs.msg import Header
+from rclpy.duration import Duration
 
 from prediction_msgs.msg import Mixture2DSequence, Mixture2D, Gaussian2D, OccupancyGridArray
 
@@ -106,6 +108,33 @@ def _sample_mixture_torch(mix: Mixture2D, n: int):
     samples = samples[perm]
     return samples.numpy()
 
+def _mixture_pdf(mix: Mixture2D, X: np.ndarray) -> np.ndarray:
+    """
+    Dichte der bivariaten Gauss-Mixture an Punkten X (N,2).
+    """
+    weights = np.asarray(mix.weights, dtype=float)
+    weights = np.clip(weights, 1e-12, None)
+    weights = weights / weights.sum()
+    N = X.shape[0]
+    dens = np.zeros(N, dtype=float)
+
+    two_pi = 2.0 * math.pi
+    for w, comp in zip(weights, mix.components):
+        mu = np.asarray(comp.mu, dtype=float)          # (2,)
+        S  = _cov_from_flat(comp.sigma)                # (2,2)
+        # Vorberechnungen
+        detS = float(np.linalg.det(S))
+        if detS <= 0.0:
+            # numerische Stabilisierung (sollte selten passieren, _cov_from_flat schiebt schon)
+            S = S + np.eye(2) * 1e-10
+            detS = float(np.linalg.det(S))
+        invS = np.linalg.inv(S)
+        norm = w / (two_pi * math.sqrt(detS))
+        DX = X - mu                                    # (N,2)
+        Q  = np.einsum('ni,ij,nj->n', DX, invS, DX)    # Quadratische Form
+        dens += norm * np.exp(-0.5 * Q)
+    return dens
+
 
 class MDNSamplerNode(Node):
     """
@@ -124,7 +153,7 @@ class MDNSamplerNode(Node):
         # ---- Parameter ----
         self.declare_parameter('topic_in', '/predictions/mixtures')
         self.declare_parameter('topic_out', '/predictions/costmaps')          # Array
-        self.declare_parameter('topic_out_single', '/predictions/costmap_t05s')    # Single
+        self.declare_parameter('topic_out_single', '/predictions/costmap_t1_5s')    # Single
 
         # Arbeitsbereich (m) & Auflösung
         self.declare_parameter('x_min', -10.0)
@@ -142,6 +171,17 @@ class MDNSamplerNode(Node):
         self.declare_parameter('output_mode', 'array')   # 'array' | 'single'
         self.declare_parameter('output_h', -1)           # Index [0..H-1], -1=per Zeit
         self.declare_parameter('output_t', -1.0)         # Zielzeit [s], -1=deaktiviert
+
+        # Perzentil-/HPD-Output (Paper-CLs)
+        self.declare_parameter('percentile_mode', False)   # False = altes Verhalten
+        self.declare_parameter('percentile_p68', 0.68)
+        self.declare_parameter('percentile_p85', 0.85)
+        self.declare_parameter('percentile_p95', 0.95)
+        # Schreibwerte in die Costmap (0..100)
+        self.declare_parameter('percentile_value_else', 0)
+        self.declare_parameter('percentile_value_68', 50)
+        self.declare_parameter('percentile_value_85', 75)
+        self.declare_parameter('percentile_value_95', 100)
 
         topic_in   = str(self.get_parameter('topic_in').value)
         topic_outA = str(self.get_parameter('topic_out').value)
@@ -186,6 +226,12 @@ class MDNSamplerNode(Node):
             f"grid: {self.width}x{self.height} @ {self.res} m"
         )
 
+        # --- Plot Setup ---
+        self.fig, self.axs = plt.subplots(1, 4, figsize=(12, 3))
+        self.imgs = None
+        plt.ion()
+        plt.show()
+
     # ---- Sampling einer einzelnen Mixture zu Histogramm ----
     def _hist_from_mixture(self, mix: Mixture2D) -> np.ndarray:
         S = int(self.get_parameter('samples_per_step').value)
@@ -220,18 +266,79 @@ class MDNSamplerNode(Node):
             grid = (grid - min_val) / (max_val - min_val)
         return grid
 
+    def _percentile_grid_from_mixture(self, mix: Mixture2D) -> np.ndarray:
+        """
+        Liefert ein Grid (height,width) mit Werten in [0..1], die nachher *100 geschrieben werden.
+        Die Werte sind NICHT Wahrscheinlichkeiten, sondern die konfigurierten Costmap-Werte
+        (z.B. 0.50, 0.75, 1.00 für 68/85/95%) – überall sonst 0.0.
+        """
+        # Parameter holen
+        p68 = float(self.get_parameter('percentile_p68').value)
+        p85 = float(self.get_parameter('percentile_p85').value)
+        p95 = float(self.get_parameter('percentile_p95').value)
 
-    def _make_grid_msg(self, grid_prob: np.ndarray, frame_id: str) -> OccupancyGrid:
+        v_else = float(self.get_parameter('percentile_value_else').value)
+        v68    = float(self.get_parameter('percentile_value_68').value)
+        v85    = float(self.get_parameter('percentile_value_85').value)
+        v95    = float(self.get_parameter('percentile_value_95').value)
+
+        # (a) Samples für CL-Schätzung ziehen (wie beim Histogramm)
+        S = int(self.get_parameter('samples_per_step').value)
+        if self.backend == 'torch' and self.torch_available:
+            samples = _sample_mixture_torch(mix, S)
+        else:
+            samples = _sample_mixture_numpy(mix, S, self.rng)  # (S,2)
+
+        # Dichten der Samples (für ECDF der Dichte)
+        dens_samples = _mixture_pdf(mix, samples)
+        dens_sorted = np.sort(dens_samples)  # aufsteigend
+
+        # (b) Zellmittelpunkte erzeugen
+        xs = self.x_min + (np.arange(self.width)  + 0.5) * self.res
+        ys = self.y_min + (np.arange(self.height) + 0.5) * self.res
+        XX, YY = np.meshgrid(xs, ys)                     # (H,W)
+        pts = np.column_stack([XX.ravel(order='C'), YY.ravel(order='C')])  # (H*W, 2)
+
+        # (c) Dichte an Zellmitteln
+        dens_cells = _mixture_pdf(mix, pts)              # (H*W,)
+
+        # (d) CL-Schätzung 1 - alpha(p) = P(D(Z) >= D(p)) per ECDF
+        # Anteil >= d  ==  (S - idx)/S, mit idx = # {dens < d}
+        idx = np.searchsorted(dens_sorted, dens_cells, side='left')
+        CL = (S - idx).astype(np.float64) / float(S)     # (H*W,) in [0,1]
+
+        # (e) HPD-Bänder: Punkt gehört zur (1-alpha)-Region, wenn CL(p) <= (1-alpha)
+        vals = np.full(CL.shape, v_else, dtype=np.float64)
+        # 68% (innerste Region) hat kleinste CL-Schwelle:
+        mask68 = CL <= p68
+        mask85 = (CL <= p85) & ~mask68
+        mask95 = (CL <= p95) & ~mask68 & ~mask85
+        vals[mask68] = v68
+        vals[mask85] = v85
+        vals[mask95] = v95
+
+        # in [0..1] normalisieren, weil _make_grid_msg *100 skaliert
+        vals = np.clip(vals / 100.0, 0.0, 1.0)
+        return vals.reshape(self.height, self.width)
+
+
+
+    def _make_grid_msg(self, grid_prob: np.ndarray, frame_id: str, stamp=None) -> OccupancyGrid:
         # Wahrscheinlichkeit -> 0..100 (int8)
         data = np.clip(np.round(grid_prob * 100.0), 0, 100).astype(np.int8).ravel(order='C')
 
         og = OccupancyGrid()
-        og.header = _now_header(self, frame_id)
+        if stamp is None:
+            og.header = _now_header(self, frame_id)
+        else:
+            og.header.frame_id = frame_id
+            og.header.stamp = stamp
 
         info = MapMetaData()
         info.resolution = float(self.res)
         info.width = self.width
         info.height = self.height
+        info.map_load_time = og.header.stamp
         info.origin.position.x = float(self.x_min)
         info.origin.position.y = float(self.y_min)
         info.origin.position.z = 0.0
@@ -242,6 +349,17 @@ class MDNSamplerNode(Node):
         return og
 
     # ---- Index finden (per h oder per Zeit) ----
+    def _horizon_seconds(self, msg: Mixture2DSequence) -> List[float]:
+        """Liefert die Horizonte in Sekunden pro Schritt."""
+        H = len(msg.mixtures)
+        if len(msg.horizons) == H:
+            return [h.sec + 1e-9 * h.nanosec for h in msg.horizons]
+        dt = float(msg.dt) if msg.dt > 0 else 0.0
+        if dt <= 0.0:
+            return [float(k + 1) for k in range(H)]
+        else:
+            return [dt * float(k + 1) for k in range(H)]
+
     def _select_index(self, msg: Mixture2DSequence) -> int:
         H = len(msg.mixtures)
         if H == 0:
@@ -256,17 +374,7 @@ class MDNSamplerNode(Node):
 
         out_t = float(self.get_parameter('output_t').value)
         if out_t >= 0.0:
-            # Zeiten aus msg.horizons (wenn vorhanden), sonst aus msg.dt
-            times: List[float] = []
-            if len(msg.horizons) == H:
-                times = [h.sec + 1e-9 * h.nanosec for h in msg.horizons]
-            else:
-                dt = float(msg.dt) if msg.dt > 0 else 0.0
-                if dt <= 0.0:
-                    # fallback: gleichmäßige Schritte 1..H
-                    times = [float(k + 1) for k in range(H)]
-                else:
-                    times = [dt * float(k + 1) for k in range(H)]
+            times = self._horizon_seconds(msg)
             idx = int(np.argmin(np.abs(np.asarray(times) - out_t)))
             return idx
 
@@ -283,22 +391,63 @@ class MDNSamplerNode(Node):
             if idx < 0 or idx >= len(msg.mixtures):
                 self.get_logger().warn("Keine Mixture vorhanden, publiziere nicht.")
                 return
-            grid_prob = self._hist_from_mixture(msg.mixtures[idx])
-            og = self._make_grid_msg(grid_prob, frame_id)
+            # Vorhersagezeitpunkt ermitteln und in Header stempeln
+            times = self._horizon_seconds(msg)
+            pred_stamp = (self.get_clock().now() + Duration(seconds=times[idx])).to_msg()
+ 
+            if bool(self.get_parameter('percentile_mode').value):
+                grid_val = self._percentile_grid_from_mixture(msg.mixtures[idx])
+            else:
+                grid_val = self._hist_from_mixture(msg.mixtures[idx])
+
+            og = self._make_grid_msg(grid_val, frame_id, stamp=pred_stamp)
             self.pub_single.publish(og)
             return
 
         # Standard: alle Mixturen als Array
         grids = []
-        for mix in msg.mixtures:
-            grid_prob = self._hist_from_mixture(mix)
-            og = self._make_grid_msg(grid_prob, frame_id)
+        grid_probs = []
+        times = self._horizon_seconds(msg)
+        now = self.get_clock().now()
+        for k, mix in enumerate(msg.mixtures):
+            if bool(self.get_parameter('percentile_mode').value):
+                grid_val = self._percentile_grid_from_mixture(msg.mixtures[k])
+            else:
+                grid_val = self._hist_from_mixture(msg.mixtures[k])
+
+            pred_stamp = (now + Duration(seconds=times[k])).to_msg()
+            og = self._make_grid_msg(grid_val, frame_id, stamp=pred_stamp)
             grids.append(og)
+            grid_probs.append(grid_val)
 
         out = OccupancyGridArray()
         out.header = _now_header(self, frame_id)
         out.grids = grids
         self.pub_array.publish(out)
+
+        # --- Live-Plot aktualisieren ---
+        H = len(grid_probs)
+        if H >= 4:
+            idxs = [0, H // 3, 2 * H // 3, H - 1]
+        else:
+            idxs = list(range(H))  # falls nur wenige Horizonte
+
+        selected = [grid_probs[i] for i in idxs]
+        horizon_times = [times[i] for i in idxs]
+
+        if self.imgs is None:
+            self.imgs = []
+            for ax, grid, t in zip(self.axs, selected, horizon_times):
+                im = ax.imshow(grid, origin='lower', cmap='hot', vmin=0, vmax=1)
+                ax.set_title(f"{t:.1f}s")
+                self.imgs.append(im)
+            plt.tight_layout()
+        else:
+            for im, grid, ax, t in zip(self.imgs, selected, self.axs, horizon_times):
+                im.set_data(grid)
+                ax.set_title(f"{t:.1f}s")
+
+        plt.pause(0.001)
 
 
 def main():

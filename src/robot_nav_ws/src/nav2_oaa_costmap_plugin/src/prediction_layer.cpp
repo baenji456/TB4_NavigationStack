@@ -12,9 +12,12 @@
 #include "tf2_geometry_msgs/tf2_geometry_msgs.hpp"
 #include "geometry_msgs/msg/transform_stamped.hpp"
 
+#include "prediction_msgs/msg/occupancy_grid_array.hpp"
+
 using nav2_costmap_2d::NO_INFORMATION;
 using nav2_costmap_2d::FREE_SPACE;
 using rcl_interfaces::msg::ParameterType;
+using GridArrayMsg = prediction_msgs::msg::OccupancyGridArray; // anpassen falls nötig
 
 namespace nav2_oaa_costmap_plugin
 {
@@ -54,6 +57,27 @@ void PredictionLayer::onInitialize()
   declareParameter("require_same_frame", rclcpp::ParameterValue(true));
   declareParameter("data_timeout", rclcpp::ParameterValue(2.0));     // s
 
+  declareParameter("odom_topic", rclcpp::ParameterValue(std::string{"/odom"}));
+  declareParameter("forecast_dt", rclcpp::ParameterValue(0.1));      // [s] gleichmäßige Schrittweite
+  declareParameter("use_grid_header_times", rclcpp::ParameterValue(false));
+  declareParameter("t0_offset", rclcpp::ParameterValue(0.1));        // [s] Startversatz (z.B. 0 oder dt)
+  declareParameter("v_min", rclcpp::ParameterValue(0.05));           // [m/s] Schutz gegen div/0
+  declareParameter("use_time_interp", rclcpp::ParameterValue(true));  // lineare Zeitinterpolation
+  declareParameter("max_time", rclcpp::ParameterValue(5.0));          // [s] Horizont begrenzen
+
+  declareParameter("grid_index", rclcpp::ParameterValue(0)); // NEU
+  node->get_parameter(name_ + "." + "grid_index", grid_index_); // NEU
+
+
+  node->get_parameter(name_ + ".odom_topic", odom_topic_);
+  node->get_parameter(name_ + ".forecast_dt", forecast_dt_);
+  node->get_parameter(name_ + ".use_grid_header_times", use_grid_header_times_);
+  node->get_parameter(name_ + ".t0_offset", t0_offset_);
+  node->get_parameter(name_ + ".v_min", v_min_);
+  node->get_parameter(name_ + ".use_time_interp", use_time_interp_);
+  node->get_parameter(name_ + ".max_time", max_time_);
+
+
   node->get_parameter(name_ + "." + "enabled", enabled_);
   node->get_parameter(name_ + "." + "combination_method", combination_method_);
   node->get_parameter(name_ + "." + "topic", topic_);
@@ -67,10 +91,25 @@ void PredictionLayer::onInitialize()
   // QoS: latched + reliable
   rclcpp::QoS qos(1);
   qos.reliable();
-  qos.transient_local();
+  // qos.transient_local();
 
-  sub_ = node->create_subscription<nav_msgs::msg::OccupancyGrid>(
-    topic_, qos, std::bind(&PredictionLayer::gridCallback, this, std::placeholders::_1));
+// Subscribe to a *sequence* of future occupancy grids and to odometry.
+// QoS for grids is reliable + transient_local ("latched") so late joiners get the latest array.
+// Odometry gives current planar speed for ETA calculation.
+  sub_array_ = node->create_subscription<GridArrayMsg>(
+    topic_, qos, std::bind(&PredictionLayer::gridArrayCallback, this, std::placeholders::_1));
+
+  sub_odom_ = node->create_subscription<nav_msgs::msg::Odometry>(
+    odom_topic_, rclcpp::QoS(10).best_effort(),
+    [this](const nav_msgs::msg::Odometry::SharedPtr msg)
+    {
+      // Betrag der Geschwindigkeit in Ebene (vx, vy in base_link)
+      const double vx = msg->twist.twist.linear.x;
+      const double vy = msg->twist.twist.linear.y;
+      v_lin_ = std::hypot(vx, vy);
+      have_odom_.store(true, std::memory_order_relaxed);
+    });
+  
 
   dyn_params_handler_ =
       node->add_on_set_parameters_callback(
@@ -111,39 +150,95 @@ unsigned char PredictionLayer::occToCost(int8_t occ) const
   if (occ < 0) {
     return treat_unknown_as_free_ ? FREE_SPACE : NO_INFORMATION;
   }
-  const double scaled = std::round(std::min<double>(100.0, std::max<double>(0.0, occ)) * 2.52);
-  return static_cast<unsigned char>(std::min<int>(252, static_cast<int>(scaled)));
+  const int v = std::clamp<int>(occ, 0, 100);
+  // Map [0..99] -> [0..252], 100 -> lethal (254)
+  if (v == 100) return nav2_costmap_2d::LETHAL_OBSTACLE;  // 254
+  return static_cast<unsigned char>(std::lround(v * 2.545)); // 0..252
 }
 
-void PredictionLayer::gridCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg)
+// void PredictionLayer::gridCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg)
+// {
+//   auto node = node_.lock();
+//   if (!node) { return; }
+
+//   if (require_same_frame_ && msg->header.frame_id != global_frame_) {
+//     RCLCPP_WARN_THROTTLE(logger_, *clock_, 2000,
+//       "PredictionLayer: incoming grid frame '%s' != global_frame '%s' (ignored). "
+//       "Set '%s.require_same_frame:=false' to enable TF-based fusion.",
+//       msg->header.frame_id.c_str(), global_frame_.c_str(), name_.c_str());
+//     return;
+//   }
+
+//   {
+//     std::scoped_lock lk(grid_mutex_);
+//     last_grid_ = std::make_shared<nav_msgs::msg::OccupancyGrid>(*msg);
+//     last_stamp_ = clock_->now();
+//   }
+
+//   double minx, miny, maxx, maxy;
+//   computeGridAABBGlobal(*msg, minx, miny, maxx, maxy);
+//   {
+//     std::scoped_lock lk(grid_mutex_);
+//     gmin_x_ = minx; gmin_y_ = miny; gmax_x_ = maxx; gmax_y_ = maxy;
+//     have_bounds_ = true;
+//   }
+
+//   current_ = true;
+// }
+
+// Called when a new OccupancyGridArray arrives.
+// Stores the array, precomputes per-slice affines (world->cell),
+// and constructs the time axis either from header stamps or uniform dt.
+void PredictionLayer::gridArrayCallback(const GridArrayMsg::SharedPtr msg)
 {
   auto node = node_.lock();
-  if (!node) { return; }
-
-  if (require_same_frame_ && msg->header.frame_id != global_frame_) {
-    RCLCPP_WARN_THROTTLE(logger_, *clock_, 2000,
-      "PredictionLayer: incoming grid frame '%s' != global_frame '%s' (ignored). "
-      "Set '%s.require_same_frame:=false' to enable TF-based fusion.",
-      msg->header.frame_id.c_str(), global_frame_.c_str(), name_.c_str());
-    return;
-  }
+  if (!node || msg->grids.empty()) { return; }
 
   {
     std::scoped_lock lk(grid_mutex_);
-    last_grid_ = std::make_shared<nav_msgs::msg::OccupancyGrid>(*msg);
+    last_grid_array_ = std::make_shared<GridArrayMsg>(*msg);
     last_stamp_ = clock_->now();
-  }
 
-  double minx, miny, maxx, maxy;
-  computeGridAABBGlobal(*msg, minx, miny, maxx, maxy);
-  {
-    std::scoped_lock lk(grid_mutex_);
+    const size_t H = last_grid_array_->grids.size();
+    affines_.resize(H);
+    x_of_grid_.resize(H);
+
+    // Referenzzeit t0
+    const rclcpp::Time t0 = use_grid_header_times_
+        ? rclcpp::Time(last_grid_array_->header.stamp)  // <-- konvertieren
+        : clock_->now();
+    const double t0_sec = t0.seconds() + t0_offset_;
+
+    for (size_t k = 0; k < H; ++k) {
+      const auto &g = last_grid_array_->grids[k];
+      buildAffineFromGrid(g, affines_[k]);
+      x_of_grid_[k] = use_grid_header_times_
+        ? (rclcpp::Time(g.header.stamp).seconds() - t0_sec)  // <-- konvertieren
+        : (static_cast<double>(k) * forecast_dt_);    
+    }
+
+    if (!use_grid_header_times_) {
+      // Gleichmäßige dt: letzter gültiger Zeitpunkt = (H-1)*forecast_dt_
+      max_time_ = std::min(max_time_, (H > 0) ? (H - 1) * forecast_dt_ : 0.0);
+    } else {
+      // Ungleichmäßige Zeiten: nimm das Ende der tatsächlichen Zeitachse
+      const double horizon = x_of_grid_.empty() ? 0.0 : x_of_grid_.back();
+      max_time_ = std::min(max_time_, horizon);
+    }
+
+    // Bounds – minimal: aus erster Karte
+    double minx, miny, maxx, maxy;
+    computeGridAABBGlobal(last_grid_array_->grids.front(), minx, miny, maxx, maxy);
     gmin_x_ = minx; gmin_y_ = miny; gmax_x_ = maxx; gmax_y_ = maxy;
+    
     have_bounds_ = true;
   }
 
   current_ = true;
 }
+
+
+
 
 rcl_interfaces::msg::SetParametersResult
 PredictionLayer::dynamicParametersCallback(std::vector<rclcpp::Parameter> params)
@@ -167,7 +262,10 @@ PredictionLayer::dynamicParametersCallback(std::vector<rclcpp::Parameter> params
       require_same_frame_ = p.as_bool();
     } else if (n == name_ + ".data_timeout" && t == ParameterType::PARAMETER_DOUBLE) {
       data_timeout_ = p.as_double();
+    } else if (n == name_ + ".grid_index" && t == ParameterType::PARAMETER_INTEGER) {
+      grid_index_ = std::max<int>(0, static_cast<int>(p.as_int())); // NEU
     }
+  
   }
   return res;
 }
@@ -274,27 +372,50 @@ void PredictionLayer::computeGridAABBGlobal(const nav_msgs::msg::OccupancyGrid &
 
 // --- Layer-Schnittstelle -----------------------------------------------------
 
-void PredictionLayer::updateBounds(double robot_x, double robot_y, double /*robot_yaw*/,
-                                   double* min_x, double* min_y, double* max_x, double* max_y)
+// void PredictionLayer::updateBounds(double robot_x, double robot_y, double robot_yaw,
+//                                    double* min_x, double* min_y, double* max_x, double* max_y)
+// {
+//   std::lock_guard<nav2_costmap_2d::Costmap2D::mutex_t> guard(*getMutex());
+//   if (!enabled_) { return; }
+
+//   // Pose puffern für updateCosts()
+//   rb_x_ = robot_x; rb_y_ = robot_y; rb_yaw_ = robot_yaw;
+
+//   if (rolling_window_) {
+//     updateOrigin(robot_x - getSizeInMetersX() / 2.0,
+//                  robot_y - getSizeInMetersY() / 2.0);
+//   }
+
+//   std::shared_ptr<GridArrayMsg> arr;
+//   { std::scoped_lock lk(grid_mutex_); arr = last_grid_array_; }
+//   if (!arr) { current_ = false; return; }
+//   if ((clock_->now() - last_stamp_).seconds() > data_timeout_) { current_ = false; return; }
+//   current_ = true;
+
+//   if (have_bounds_) {
+//     touch(gmin_x_, gmin_y_, min_x, min_y, max_x, max_y);
+//     touch(gmax_x_, gmax_y_, min_x, min_y, max_x, max_y);
+//   }
+// }
+
+void PredictionLayer::updateBounds(double robot_x, double robot_y, double robot_yaw,
+  double* min_x, double* min_y, double* max_x, double* max_y)
 {
   std::lock_guard<nav2_costmap_2d::Costmap2D::mutex_t> guard(*getMutex());
-
   if (!enabled_) { return; }
+
+  // Pose puffern für updateCosts()
+  rb_x_ = robot_x; rb_y_ = robot_y; rb_yaw_ = robot_yaw;
 
   if (rolling_window_) {
     updateOrigin(robot_x - getSizeInMetersX() / 2.0,
-                 robot_y - getSizeInMetersY() / 2.0);
+      robot_y - getSizeInMetersY() / 2.0);
   }
 
-  nav_msgs::msg::OccupancyGrid::SharedPtr grid;
-  {
-    std::scoped_lock lk(grid_mutex_);
-    grid = last_grid_;
-  }
-  if (!grid) { current_ = false; return; }
-  if ((clock_->now() - last_stamp_).seconds() > data_timeout_) {
-    current_ = false; return;
-  }
+  std::shared_ptr<GridArrayMsg> arr;
+  { std::scoped_lock lk(grid_mutex_); arr = last_grid_array_; }
+  if (!arr) { current_ = false; return; }
+  if ((clock_->now() - last_stamp_).seconds() > data_timeout_) { current_ = false; return; }
   current_ = true;
 
   if (have_bounds_) {
@@ -303,76 +424,221 @@ void PredictionLayer::updateBounds(double robot_x, double robot_y, double /*robo
   }
 }
 
-void PredictionLayer::updateCosts(nav2_costmap_2d::Costmap2D& master_grid,
-                                  int min_i, int min_j, int max_i, int max_j)
+
+
+
+// void PredictionLayer::updateCosts(nav2_costmap_2d::Costmap2D& master_grid,
+//                                   int min_i, int min_j, int max_i, int max_j)
+// {
+//   std::lock_guard<nav2_costmap_2d::Costmap2D::mutex_t> guard(*getMutex());
+//   if (!enabled_) { return; }
+
+//   nav_msgs::msg::OccupancyGrid::SharedPtr grid;
+//   {
+//     std::scoped_lock lk(grid_mutex_);
+//     grid = last_grid_;
+//   }
+//   if (!grid) { return; }
+
+//   Affine2D A;
+//   buildAffineFromGrid(*grid, A);
+
+//   const unsigned int gw = grid->info.width;
+//   const unsigned int gh = grid->info.height;
+
+//   for (int j = min_j; j < max_j; ++j) {
+//     for (int i = min_i; i < max_i; ++i) {
+
+//       double wx, wy;
+//       master_grid.mapToWorld(i, j, wx, wy);
+
+//       int gi, gj;
+//       if (!A.worldToCell(wx, wy, gi, gj, gw, gh)) {
+//         continue;
+//       }
+
+//       const size_t g_idx = static_cast<size_t>(gj) * gw + gi;
+//       const int8_t occ = grid->data[g_idx];
+
+//       if (occ >= 0 && static_cast<double>(occ) < min_apply_cost_) {
+//         continue;
+//       }
+
+//       const unsigned char new_cost = occToCost(occ);
+
+//       // Unknown durchreichen
+//       if (new_cost == NO_INFORMATION && !treat_unknown_as_free_) {
+//         if (master_grid.getCost(i, j) == NO_INFORMATION) {
+//           master_grid.setCost(i, j, NO_INFORMATION);
+//         }
+//         continue;
+//       }
+
+//       const unsigned char old_cost = master_grid.getCost(i, j);
+
+//       // nur MAX (oder overwrite, falls explizit gesetzt)
+//       switch (combination_method_) {
+//         case 0: // overwrite
+//           if (old_cost != nav2_costmap_2d::NO_INFORMATION) {
+//             master_grid.setCost(i, j, new_cost);
+//           }
+//           break;
+//         case 1: // max
+//         default:
+//           if (old_cost != nav2_costmap_2d::NO_INFORMATION) {
+//             master_grid.setCost(i, j, std::max(old_cost, new_cost));
+//           } else {
+//             master_grid.setCost(i, j, new_cost);
+//           }
+//           break;
+//       }
+//     }
+//   }
+
+//   current_ = true;
+// }
+
+void PredictionLayer::updateCosts(nav2_costmap_2d::Costmap2D& master,
+  int min_i, int min_j, int max_i, int max_j)
 {
   std::lock_guard<nav2_costmap_2d::Costmap2D::mutex_t> guard(*getMutex());
   if (!enabled_) { return; }
 
-  nav_msgs::msg::OccupancyGrid::SharedPtr grid;
-  {
+  std::shared_ptr<GridArrayMsg> arr;
+  std::vector<Affine2D> aff; std::vector<double> xgrid;
+  { // Thread-sicher kopieren
     std::scoped_lock lk(grid_mutex_);
-    grid = last_grid_;
+    arr   = last_grid_array_;
+    aff   = affines_;
+    xgrid = x_of_grid_;
   }
-  if (!grid) { return; }
+  if (!arr || arr->grids.empty()) { return; }
 
-  Affine2D A;
-  buildAffineFromGrid(*grid, A);
+  const size_t H = arr->grids.size();
+  // Annahme: alle Grids haben gleiche Dimension (H_map x W_map):
+  const unsigned gw = arr->grids[0].info.width;
+  const unsigned gh = arr->grids[0].info.height;
 
-  const unsigned int gw = grid->info.width;
-  const unsigned int gh = grid->info.height;
+  // aktuelle (sichere) Geschwindigkeit
+  const double v = std::max(v_lin_, v_min_);
 
   for (int j = min_j; j < max_j; ++j) {
     for (int i = min_i; i < max_i; ++i) {
 
-      double wx, wy;
-      master_grid.mapToWorld(i, j, wx, wy);
+      // Weltkoordinate der Masterzelle
+      double wx, wy; master.mapToWorld(i, j, wx, wy);
 
-      int gi, gj;
-      if (!A.worldToCell(wx, wy, gi, gj, gw, gh)) {
-        continue;
-      }
+      // Reisezeit abschätzen: euklidische Distanz / v
+      const double dx = wx - rb_x_;
+      const double dy = wy - rb_y_;
+      const double dist = std::hypot(dx, dy);
+      const double t_travel = dist / v;
 
-      const size_t g_idx = static_cast<size_t>(gj) * gw + gi;
-      const int8_t occ = grid->data[g_idx];
+      if (t_travel > max_time_) { continue; } // außerhalb des Horizonts
 
-      if (occ >= 0 && static_cast<double>(occ) < min_apply_cost_) {
-        continue;
-      }
+      // passenden Zeitschritt finden: Index k mit minimalem |x_k - t_travel|
+      size_t k_best = 0;
+      if (use_time_interp_) {
+        // Interp: finde k0<=t<k1
+        // schnelle Variante bei gleichmäßigem dt:
+        if (!use_grid_header_times_) {
+          const double idx_f = t_travel / forecast_dt_;
+          size_t k0 = static_cast<size_t>(std::floor(idx_f));
+          // ---------------------- CLAMP START ----------------------
+          if (k0 >= H) k0 = H - 1;                      // <<< CLAMP k0 in [0, H-1]
+          size_t k1 = (k0 + 1 < H) ? (k0 + 1) : k0;     // <<< CLAMP k1 = k0 oder k0+1
+          // ---------------------- CLAMP END ------------------------
+          const double x0 = xgrid[k0];
+          const double x1 = xgrid[k1];
+          double w1 = (x1 > x0) ? (t_travel - x0) / (x1 - x0) : 0.0;
+          w1 = std::clamp(w1, 0.0, 1.0);                // <<< CLAMP w1 in [0,1]
+          const double w0 = 1.0 - w1;
 
-      const unsigned char new_cost = occToCost(occ);
+          // Rasterindex in k0/k1 nach Welt → Zellkoordinate transformieren
+          int gi0, gj0, gi1, gj1;
+          bool ok0 = aff[k0].worldToCell(wx, wy, gi0, gj0, gw, gh);
+          bool ok1 = aff[k1].worldToCell(wx, wy, gi1, gj1, gw, gh);
+          if (!ok0 && !ok1) { continue; }
 
-      // Unknown durchreichen
-      if (new_cost == NO_INFORMATION && !treat_unknown_as_free_) {
-        if (master_grid.getCost(i, j) == NO_INFORMATION) {
-          master_grid.setCost(i, j, NO_INFORMATION);
-        }
-        continue;
-      }
-
-      const unsigned char old_cost = master_grid.getCost(i, j);
-
-      // nur MAX (oder overwrite, falls explizit gesetzt)
-      switch (combination_method_) {
-        case 0: // overwrite
-          if (old_cost != nav2_costmap_2d::NO_INFORMATION) {
-            master_grid.setCost(i, j, new_cost);
+          double occ_lin = 0.0;
+          if (ok0) {
+            const int8_t occ0 = arr->grids[k0].data[static_cast<size_t>(gj0) * gw + gi0];
+            if (!(occ0 >= 0 && static_cast<double>(occ0) < min_apply_cost_)) {
+              occ_lin += w0 * static_cast<double>(occ0);
+            }
           }
-          break;
-        case 1: // max
-        default:
-          if (old_cost != nav2_costmap_2d::NO_INFORMATION) {
-            master_grid.setCost(i, j, std::max(old_cost, new_cost));
+          if (ok1) {
+            const int8_t occ1 = arr->grids[k1].data[static_cast<size_t>(gj1) * gw + gi1];
+            if (!(occ1 >= 0 && static_cast<double>(occ1) < min_apply_cost_)) {
+              occ_lin += w1 * static_cast<double>(occ1);
+            }
+          }
+
+          // In Costmap-Kosten mappen
+          occ_lin = std::clamp(occ_lin, 0.0, 100.0);     // <<< CLAMP Occ in [0,100]
+          const unsigned char new_cost =
+              occToCost(static_cast<int8_t>(std::lround(occ_lin)));
+
+          // Unknown-Handhabung & Kombination wie gehabt
+          if (new_cost == NO_INFORMATION && !treat_unknown_as_free_) {
+            if (master.getCost(i, j) == NO_INFORMATION) {
+              master.setCost(i, j, NO_INFORMATION);
+            }
+            continue;
+          }
+          const unsigned char old_cost = master.getCost(i, j);
+          if (combination_method_ == 0) {
+            if (old_cost != nav2_costmap_2d::NO_INFORMATION) master.setCost(i, j, new_cost);
           } else {
-            master_grid.setCost(i, j, new_cost);
+            if (old_cost != nav2_costmap_2d::NO_INFORMATION) {
+              master.setCost(i, j, std::max(old_cost, new_cost));
+            } else {
+              master.setCost(i, j, new_cost);
+            }
           }
-          break;
+          continue; // Interpolationspfad abgeschlossen
+        }
+      }
+
+      // Kein Interp (oder ungleichmäßige Zeiten): bestes k per nächster Zeit
+      {
+        // lineare Suche (H meist klein). Optional: binäre Suche.
+        double best = std::numeric_limits<double>::infinity();
+        for (size_t k = 0; k < H; ++k) {
+          const double d = std::abs(xgrid[k] - t_travel);
+          if (d < best) { best = d; k_best = k; }
+        }
+
+        int gi, gj;
+        if (!aff[k_best].worldToCell(wx, wy, gi, gj, gw, gh)) { continue; }
+        const int8_t occ = arr->grids[k_best].data[static_cast<size_t>(gj) * gw + gi];
+
+        if (occ >= 0 && static_cast<double>(occ) < min_apply_cost_) { continue; }
+
+        const unsigned char new_cost = occToCost(occ);
+        if (new_cost == NO_INFORMATION && !treat_unknown_as_free_) {
+          if (master.getCost(i, j) == NO_INFORMATION) master.setCost(i, j, NO_INFORMATION);
+          continue;
+        }
+
+        const unsigned char old_cost = master.getCost(i, j);
+        if (combination_method_ == 0) {
+          if (old_cost != nav2_costmap_2d::NO_INFORMATION) master.setCost(i, j, new_cost);
+        } else {
+          if (old_cost != nav2_costmap_2d::NO_INFORMATION) {
+            master.setCost(i, j, std::max(old_cost, new_cost));
+          } else {
+            master.setCost(i, j, new_cost);
+          }
+        }
       }
     }
   }
 
   current_ = true;
 }
+
+
 
 }  // namespace nav2_oaa_costmap_plugin
 

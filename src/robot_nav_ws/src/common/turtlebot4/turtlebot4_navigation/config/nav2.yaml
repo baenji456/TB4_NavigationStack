@@ -70,7 +70,7 @@ bt_navigator_navigate_to_pose_rclcpp_node:
 controller_server:
   ros__parameters:
     use_sim_time: True
-    controller_frequency: 20.0
+    controller_frequency: 50.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
@@ -127,7 +127,7 @@ controller_server:
       short_circuit_trajectory_evaluation: True
       stateful: True
       critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
-      BaseObstacle.scale: 0.02
+      BaseObstacle.scale: 0.5 #0.02
       PathAlign.scale: 32.0
       PathAlign.forward_point_distance: 0.1
       GoalAlign.scale: 24.0
@@ -151,7 +151,7 @@ local_costmap:
       height: 5
       resolution: 0.06
       robot_radius: 0.175
-      plugins: ["static_layer", "voxel_layer", "inflation_layer", "prediction_layer"]
+      plugins: ["static_layer", "voxel_layer", "simple_oaa_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 4.0
@@ -179,28 +179,47 @@ local_costmap:
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
-      prediction_layer:
-        plugin: "nav2_oaa_costmap_plugin/PredictionLayer"
-        enabled: true
-        topic: "/predictions/costmap_t05s"
-        combination_method: 1
-        min_apply_cost: 1.0
-        treat_unknown_as_free: false
-        require_same_frame: false   # TF-Handling aktiv
+      simple_oaa_layer:
+        plugin: "nav2_oaa_costmap_plugin/SimpleOaaLayer"
+        topic: "/predictions/costmaps"
+        odom_topic: "/odom"
+        unknown_is_free: true
+        v_min: 0.3
+        speed_smoothing_alpha: 0.3
+        scaling_method: "linear"
         data_timeout: 2.0
+      always_send_full_costmap: True
+
+      # prediction_layer:
+      #   plugin: "nav2_oaa_costmap_plugin/PredictionLayer"
+      #   enabled: true
+      #   topic: "/predictions/costmaps"
+      #   odom_topic: "odom"
+      #   forecast_dt: 0.1            # Zeitabstand der Grids (falls use_grid_header_times=false)
+      #   use_grid_header_times: False
+      #   t0_offset: 0.0
+      #   v_min: 0.05
+      #   use_time_interp: True
+      #   max_time: 3.0
+      #   min_apply_cost: 1.0
+      #   treat_unknown_as_free: False
+      #   require_same_frame: True
+      #   data_timeout: 2.0
+      #   combination_method: 1       # 0 = overwrite, 1 = max
+      #   grid_index: 0               # aktuell nicht genutzt, aber param hier setzen
 
 global_costmap:
   global_costmap:
     ros__parameters:
-      update_frequency: 1.0
-      publish_frequency: 1.0
+      update_frequency: 10.0
+      publish_frequency: 10.0
       global_frame: map
       robot_base_frame: base_link
       use_sim_time: True
       robot_radius: 0.175
       resolution: 0.06
       track_unknown_space: true
-      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
+      plugins: ["static_layer", "obstacle_layer", "simple_oaa_layer", "inflation_layer"]
       obstacle_layer:
         plugin: "nav2_costmap_2d::ObstacleLayer"
         enabled: True
@@ -222,12 +241,38 @@ global_costmap:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 4.0
         inflation_radius: 0.45
+      simple_oaa_layer:
+        plugin: "nav2_oaa_costmap_plugin/SimpleOaaLayer"
+        topic: "/predictions/costmaps"
+        odom_topic: "/odom"
+        unknown_is_free: true
+        v_min: 0.3
+        speed_smoothing_alpha: 0.3
+        scaling_method: "linear"
+        data_timeout: 2.0
+      # prediction_layer:
+      #   plugin: "nav2_oaa_costmap_plugin/PredictionLayer"
+      #   enabled: true
+      #   topic: "/predictions/costmaps"
+      #   odom_topic: "/odom"
+      #   forecast_dt: 0.1            # Zeitabstand der Grids (falls use_grid_header_times=false)
+      #   use_grid_header_times: False
+      #   t0_offset: 0.0
+      #   v_min: 0.05
+      #   use_time_interp: True
+      #   max_time: 3.0
+      #   min_apply_cost: 1.0
+      #   treat_unknown_as_free: False
+      #   require_same_frame: False
+      #   data_timeout: 2.0
+      #   combination_method: 1       # 0 = overwrite, 1 = max
+      #   grid_index: 0               # aktuell nicht genutzt, aber param hier setzen
       always_send_full_costmap: True
 
 
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 20.0
+    expected_planner_frequency: 50.0
     use_sim_time: True
     planner_plugins: ["GridBased"]
     GridBased:

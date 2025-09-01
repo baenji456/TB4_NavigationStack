@@ -1,8 +1,15 @@
-<library path="nav2_oaa_costmap_plugin_core">  <!-- Name deiner erzeugten .so -->
+<library path="nav2_oaa_costmap_plugin_core">
   <class
     name="nav2_oaa_costmap_plugin/PredictionLayer"
     type="nav2_oaa_costmap_plugin::PredictionLayer"
     base_class_type="nav2_costmap_2d::Layer">
-    <description>Integrates /predictions/costmap_t05s into layered costmap</description>
+    <description>Legacy OaA prediction layer.</description>
+  </class>
+
+  <class
+    name="nav2_oaa_costmap_plugin/SimpleOaaLayer"
+    type="nav2_oaa_costmap_plugin::SimpleOaaLayer"
+    base_class_type="nav2_costmap_2d::Layer">
+    <description>Simple OaA layer using OccupancyGridArray and ETA.</description>
   </class>
 </library>
